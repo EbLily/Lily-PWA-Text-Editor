@@ -4,19 +4,18 @@ const path = require('path');
 const { InjectManifest } = require('workbox-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 
-// TODO: Add and configure workbox plugins for a service worker and manifest file.
-// TODO: Add CSS loaders and babel to webpack.
+module.exports = (env, argv) => {
+  const isProduction = argv.mode === 'production';
 
-module.exports = () => {
   return {
-    mode: 'development',
+    mode: isProduction ? 'production' : 'development',
     entry: {
       main: './src/js/index.js',
       install: './src/js/install.js'
     },
     output: {
       filename: '[name].bundle.js',
-      path: path.resolve(__dirname, '.'),
+      path: path.resolve(__dirname, 'dist'),
     },
     plugins: [
       new HtmlWebpackPlugin({
@@ -24,10 +23,15 @@ module.exports = () => {
         title: "Webpack Plugin",
       }),
       new MiniCssExtractPlugin(),
-      new InjectManifest({
-        swSrc: "./src-sw.js",
-        swDest: "src-sw.js",
-      }),
+      // Only include InjectManifest in production mode
+      ...(isProduction
+        ? [
+            new InjectManifest({
+              swSrc: "./src-sw.js",
+              swDest: "src-sw.js",
+            }),
+          ]
+        : []),
       new WebpackPwaManifest({
         fingerprints: false,
         inject: true,
@@ -40,23 +44,26 @@ module.exports = () => {
         publicPath: "/",
         icons: [
           {
-            src: path.resolve("src/images/logo.png"),
+            src: path.resolve(__dirname, 'src/images/logo.png'),
             sizes: [96, 128, 192, 256, 384, 512],
             destination: path.join("assets", "icons"),
           },
         ],
       }),
     ],
-    
-
+    devServer: {
+      static: path.join(__dirname, 'dist'),
+      hot: true,
+      devMiddleware: {
+        writeToDisk: true,
+      },
+    },
     module: {
       rules: [
         {
           test: /\.css$/i,
-          // exclude: /node_modules/,
           use: ['style-loader', 'css-loader'],
         },
-  
         {
           test: /\.m?js$/,
           exclude: /node_modules/,
